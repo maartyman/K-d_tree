@@ -1,0 +1,178 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.KdTree = exports.DimensionOrder = void 0;
+var DimensionOrder;
+(function (DimensionOrder) {
+    DimensionOrder[DimensionOrder["normal"] = 0] = "normal";
+    DimensionOrder[DimensionOrder["highestDeviation"] = 1] = "highestDeviation";
+    DimensionOrder[DimensionOrder["lowestDeviation"] = 2] = "lowestDeviation";
+})(DimensionOrder = exports.DimensionOrder || (exports.DimensionOrder = {}));
+class KdTree {
+    constructor(array, dimensionOrder = DimensionOrder.normal) {
+        this.dimensionOrder = dimensionOrder;
+        this.firstNode = this.makeNextNode(array, 0);
+        //this.printNode(this.firstNode, 0);
+    }
+    printNode(node, index) {
+        console.log(index);
+        console.log(node.point);
+        console.log("dimension: " + node.dimension);
+        if (node.smallerNode != null) {
+            this.printNode(node.smallerNode, index + 1);
+        }
+        if (node.biggerNode != null) {
+            this.printNode(node.biggerNode, index + 1);
+        }
+    }
+    makeNextNode(array, dimensionOrderIndex) {
+        let dimension = this.getDimension(array, dimensionOrderIndex);
+        if (array.length == 1) {
+            return {
+                smallerNode: null,
+                point: array[0],
+                biggerNode: null,
+                dimension: dimension
+            };
+        }
+        let info = this.findMedian(array, dimension);
+        if (info.smallerArray.length === 0) {
+            return {
+                smallerNode: null,
+                point: info.median,
+                biggerNode: this.makeNextNode(info.biggerArray, dimensionOrderIndex + 1),
+                dimension: dimension
+            };
+        }
+        if (info.biggerArray.length === 0) {
+            return {
+                smallerNode: this.makeNextNode(info.smallerArray, dimensionOrderIndex + 1),
+                point: info.median,
+                biggerNode: null,
+                dimension: dimension
+            };
+        }
+        return {
+            smallerNode: this.makeNextNode(info.smallerArray, dimensionOrderIndex + 1),
+            point: info.median,
+            biggerNode: this.makeNextNode(info.biggerArray, dimensionOrderIndex + 1),
+            dimension: dimension
+        };
+    }
+    getDimension(array, dimensionOrderIndex) {
+        switch (this.dimensionOrder) {
+            case DimensionOrder.normal:
+                if (dimensionOrderIndex == array[0].length) {
+                    dimensionOrderIndex = 0;
+                }
+                return dimensionOrderIndex;
+            case DimensionOrder.highestDeviation:
+                //get std of all dimensions, return highest std dimension
+                let stdsMax = this.getSTDs(array);
+                let maxStd2Index = 0;
+                for (const index in stdsMax) {
+                    if (stdsMax[maxStd2Index] < stdsMax[index]) {
+                        maxStd2Index = parseInt(index);
+                    }
+                }
+                return maxStd2Index;
+            case DimensionOrder.lowestDeviation:
+                //get std of all dimensions, return lowest std dimension
+                let stdsMin = this.getSTDs(array);
+                let minStd2Index = 0;
+                for (const index in stdsMin) {
+                    if (stdsMin[minStd2Index] < stdsMin[index]) {
+                        minStd2Index = parseInt(index);
+                    }
+                }
+                return minStd2Index;
+            default:
+                if (dimensionOrderIndex == array[0].length) {
+                    dimensionOrderIndex = 0;
+                }
+                return dimensionOrderIndex;
+        }
+    }
+    getSTDs(array) {
+        const n = array.length;
+        let means = new Array(array[0].length).fill(0);
+        for (const point of array) {
+            for (const index in point) {
+                means[index] += point[index] / n;
+            }
+        }
+        let stds2 = new Array(array[0].length).fill(0);
+        for (const point of array) {
+            for (const index in point) {
+                stds2[index] += (point[index] - means[index]) ** 2;
+            }
+        }
+        return stds2;
+    }
+    findMedian(array, dimension) {
+        array.sort((a, b) => {
+            if (a[dimension] < b[dimension]) {
+                return -1;
+            }
+            if (a[dimension] > b[dimension]) {
+                return 1;
+            }
+            // a must be equal to b
+            return 0;
+        });
+        //console.log(array);
+        return {
+            smallerArray: array.slice(0, Math.floor(array.length / 2)),
+            median: array[Math.floor(array.length / 2)],
+            biggerArray: array.slice(Math.floor(array.length / 2) + 1, array.length),
+        };
+    }
+    getClosestNode(point, node = this.firstNode) {
+        let pointInfo = { point: null, distance: null };
+        if (point[node.dimension] < node.point[node.dimension]) {
+            pointInfo = this.checkChildNodes(point, node, node.smallerNode, node.biggerNode);
+        }
+        else if (point[node.dimension] > node.point[node.dimension]) {
+            pointInfo = this.checkChildNodes(point, node, node.biggerNode, node.smallerNode);
+        }
+        else {
+            pointInfo = this.checkChildNodes(point, node, node.smallerNode, node.biggerNode);
+        }
+        let tempDistance = KdTree.distance(point, node.point);
+        if (pointInfo.distance != null && pointInfo.distance > tempDistance) {
+            pointInfo = { point: node.point, distance: tempDistance };
+        }
+        return pointInfo;
+    }
+    checkChildNodes(point, node, childNodePoint, otherChildNodePoint) {
+        let pointInfo;
+        //check child node
+        if (childNodePoint != null) {
+            pointInfo = this.getClosestNode(point, childNodePoint);
+        }
+        else {
+            pointInfo = {
+                point: node.point,
+                distance: KdTree.distance(point, node.point)
+            };
+        }
+        //check child node if possibly on other side
+        if (pointInfo.distance != null && pointInfo.distance >= Math.abs(node.point[node.dimension] - point[node.dimension])) {
+            if (otherChildNodePoint != null) {
+                let tempPointInfo = this.getClosestNode(point, otherChildNodePoint);
+                if (tempPointInfo.distance != null && tempPointInfo.distance < pointInfo.distance) {
+                    pointInfo = tempPointInfo;
+                }
+            }
+        }
+        return pointInfo;
+    }
+    static distance(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) {
+            sum += (a[i] - b[i]) ** 2;
+        }
+        return Math.sqrt(sum);
+    }
+}
+exports.KdTree = KdTree;
+//# sourceMappingURL=KdTree.js.map
