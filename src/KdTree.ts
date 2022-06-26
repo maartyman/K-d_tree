@@ -104,7 +104,7 @@ export class KdTree {
                 let minStd2Index = 0;
                 for (const index in stdsMin) {
                     if (stdsMin[minStd2Index] < stdsMin[index]) {
-                        maxStd2Index = parseInt(index);
+                        minStd2Index = parseInt(index);
                     }
                 }
                 return minStd2Index;

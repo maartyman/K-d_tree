@@ -1,9 +1,10 @@
 const { performance } = require('perf_hooks');
 import {DimensionOrder, KdTree} from "./KdTree";
 
-let numberOfPoints = 100000;
-let numberOfDimentions = 50;
+let numberOfPoints = 1000;
+let numberOfDimentions = 10;
 let arrayOfPoints: number[][] = new Array(numberOfPoints);
+let dimBounds: number[] = new Array(numberOfDimentions);
 //[ [ 4, 34 ], [ 10, 35 ], [ 14, 29 ], [ 15, 39 ], [ 22, 8 ] ]
 
 let timeKDNormalTreeBuild: number = 0;
@@ -18,11 +19,15 @@ let counter: number = 0;
 let startTime: number;
 let endTime: number;
 
-for (let i = 0; i < 20; i++) {
+for (let i = 0; i < 10000; i++) {
+  for (let index = 0; index < numberOfPoints; index++) {
+    dimBounds[index] = Math.round(Math.random()*100);
+  }
+
   for (let index = 0; index < numberOfPoints; index++) {
     let tempPoint: number[] = [];
     for (let i = 0; i < numberOfDimentions; i++) {
-      tempPoint[i] = Math.round(Math.random()*100);
+      tempPoint[i] = Math.round(Math.random()*dimBounds[i]);
     }
     arrayOfPoints[index] = tempPoint;
   }
@@ -49,19 +54,10 @@ for (let i = 0; i < 20; i++) {
 
   let evaluationPoint: number[] = [];
   for (let i = 0; i < numberOfDimentions; i++) {
-    evaluationPoint[i] = Math.round(Math.random()*40);
+    evaluationPoint[i] = Math.round(Math.random()*dimBounds[i]);
   }
-
-
   startTime = performance.now();
-  let closestNode = kdTreeNormal.getClosestNode(evaluationPoint);
-  endTime = performance.now();
-
-  timeKDNormalTreeSearch += endTime - startTime;
-  console.log(closestNode);
-
-  startTime = performance.now();
-  closestNode = kdTreeLowestStd.getClosestNode(evaluationPoint);
+  let closestNode = kdTreeLowestStd.getClosestNode(evaluationPoint);
   endTime = performance.now();
 
   timeKDLowestTreeSearch += endTime - startTime;
@@ -73,6 +69,15 @@ for (let i = 0; i < 20; i++) {
 
   timeKDHighestTreeSearch += endTime - startTime;
   console.log(closestNode);
+
+
+  startTime = performance.now();
+  closestNode = kdTreeNormal.getClosestNode(evaluationPoint);
+  endTime = performance.now();
+
+  timeKDNormalTreeSearch += endTime - startTime;
+  console.log(closestNode);
+
 
   let info = {point:[99, 99], distance:99999999999999999999999999999999999999999999999999999999999999999};
   let tempDistance: number;
@@ -93,6 +98,7 @@ for (let i = 0; i < 20; i++) {
   console.log(closestNode.distance == info.distance);
   counter++;
   if (closestNode.distance != info.distance){
+    console.log("------ Not the same point! ------")
     break;
   }
 }
